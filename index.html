@@ -90,15 +90,15 @@ function render(d){
   d.cats.forEach(function(c,ci){
     allHtml+='<div class="cat"><div>'+(ci+1)+'. '+E(c[0])+'</div><span>'+E(c[2])+' / '+E(c[1])+'점</span></div>';
     c[3].forEach(function(it,di){
-      var no=(ci+1)+'-'+(di+1), r=it[1]||'';
+      var no=(c[4]||(ci+1))+'-'+(it[4]||(di+1)), r=it[1]||'';
       var row='<div class="it"><div class="t"><span class="no">'+no+'</span><span class="nm">'+E(it[0])+'</span><i class="tag '+(r||'P')+'">'+RN[r]+'</i></div>'+(it[2]?'<p>'+E(it[2])+'</p>':'')+(it[3]?'<p class="ac">조치: '+E(it[3])+'</p>':'')+'</div>';
-      allHtml+=row; if(r==='S'||r==='B') acts.push(row);
+      if(!d.f) allHtml+=row; if(r==='S'||r==='B') acts.push(row);
     });
   });
   var cnt=['G','S','B','N'].map(function(k,i){return '<i class="tag '+k+'">'+RN[k]+' '+(d.c[i]||0)+'</i>';}).join('');
   app.innerHTML='<div class="card head"><small>안전보건 이행점검 · 확인 서명</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><div class="score"><span>점수</span><b>'+E(d.sc)+'</b><span>/ '+E(d.mx)+'점</span></div><div class="counts">'+cnt+'</div></div>'
    +'<h2>조치가 필요한 항목</h2><div class="card list">'+(acts.length?acts.join(''):'<div class="none">보완·미흡 항목이 없습니다.</div>')+'</div>'
-   +'<details class="card all list"><summary>전체 점검결과 ('+d.cats.reduce(function(n,c){return n+c[3].length;},0)+'항목)</summary>'+allHtml+'</details>'
+   +(d.f?'':'<details class="card all list"><summary>'+(d.f?('항목별 점수 ('+d.cats.length+'개 항목)'):('전체 점검결과 ('+d.cats.reduce(function(n,c){return n+c[3].length;},0)+'항목)'))+'</summary>'+allHtml+'</details>')
    +'<h2>서명</h2><div id="roles"></div>';
   var host=document.getElementById('roles');
   d.roles.forEach(function(r){
