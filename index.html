@@ -51,6 +51,7 @@ button{font-family:inherit;cursor:pointer}
 .empty textarea{width:100%;height:120px;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;font-family:inherit}
 .err{color:var(--bad);font-size:14px;margin-top:8px}
 .kmsg{margin:10px 0 0;font-size:14px;line-height:1.6;color:#475467}
+.done-card{text-align:center;padding:40px 20px !important}.done-card .big{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;background:#e8f2ed;color:#1e6b4e;font-size:34px;line-height:64px;font-weight:700}.done-card h1{font-size:20px;margin:0 0 8px}.done-card p{color:#475467;line-height:1.7;margin:0}
 </style></head><body>
 <div class="wrap" id="app"></div>
 <div class="bar" id="bar" hidden><div class="in"><button class="primary" id="go" disabled>서명 완료 · 회신 코드 만들기</button><small>회신 코드를 서명 요청한 분께 보내면 점검표에 저장됩니다</small></div></div>
@@ -97,7 +98,7 @@ function render(d){
     });
   });
   var cnt=['G','S','B','N'].map(function(k,i){return '<i class="tag '+k+'">'+RN[k]+' '+(d.c[i]||0)+'</i>';}).join('');
-  if(d.k){ app.innerHTML='<div class="card head"><small>UNA 안전보건팀</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><p class="kmsg">카톡·메일로 받은 점검 결과를 확인하셨다면 아래 칸에 서명해 주세요.</p></div><h2>서명</h2><div id="roles"></div>'; }
+  if(d.k){ app.innerHTML='<div class="card head"><small>UNA 안전보건팀</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><p class="kmsg">카톡·메일로 받은 점검 결과를 확인하셨다면 아래 칸에 서명해 주세요. 서명하면 바로 전달됩니다.</p></div><h2>서명</h2><div id="roles"></div>'; }
   else app.innerHTML='<div class="card head"><small>안전보건 이행점검 · 확인 서명</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><div class="score"><span>점수</span><b>'+E(d.sc)+'</b><span>/ '+E(d.mx)+'점</span></div><div class="counts">'+cnt+'</div></div>'
    +'<h2>조치가 필요한 항목</h2><div class="card list">'+(acts.length?acts.join(''):'<div class="none">보완·미흡 항목이 없습니다.</div>')+'</div>'
    +(d.f?'':'<details class="card all list"><summary>'+(d.f?('항목별 점수 ('+d.cats.length+'개 항목)'):('전체 점검결과 ('+d.cats.reduce(function(n,c){return n+c[3].length;},0)+'항목)'))+'</summary>'+allHtml+'</details>')
@@ -123,11 +124,11 @@ function render(d){
     setTimeout(size,0);
     pads[key]=p;
   });
-  document.getElementById('bar').hidden=false; check();
+  document.getElementById('bar').hidden=false; var sm0=document.querySelector('#bar small'); if(sm0) sm0.textContent=d.k?'서명하면 점검자에게 바로 전달됩니다':'회신 코드를 서명 요청한 분께 보내면 점검표에 저장됩니다'; check();
 }
 var go=document.getElementById('go');
 function ready(){ return Object.keys(pads).filter(function(k){ return pads[k].len>40; }); }
-function check(){ Object.keys(pads).forEach(function(k){ var p=pads[k],s=p.len>40; p.el.classList.toggle('has',s); p.el.querySelector('.top span').textContent=s?'서명함':'서명 전'; }); var n=ready().length; go.disabled=!n; go.textContent=n?('서명 '+n+'개 완료 · 회신 코드 만들기'):'서명 완료 · 회신 코드 만들기'; }
+function check(){ Object.keys(pads).forEach(function(k){ var p=pads[k],s=p.len>40; p.el.classList.toggle('has',s); p.el.querySelector('.top span').textContent=s?'서명함':'서명 전'; }); var n=ready().length; go.disabled=!n; go.textContent=(D&&D.k)?'서명 완료 · 보내기':(n?('서명 '+n+'개 완료 · 회신 코드 만들기'):'서명 완료 · 회신 코드 만들기'); }
 function pack(p){
   var out=[]; p.strokes.forEach(function(s){ var a=[s[0][0],s[0][1]]; for(var i=1;i<s.length;i++){ a.push(s[i][0]-s[i-1][0],s[i][1]-s[i-1][1]); } out.push(a); });
   return {n:(p.name.value||'').trim().slice(0,40),w:Math.round(p.w),h:Math.round(p.h),s:out};
@@ -148,7 +149,19 @@ function compact(p,k){
   return streamBytes(u,CompressionStream,'deflate-raw').then(function(z){ return z.length<u.length?fin(z,'S1z'):fin(u,'S1'); });
 }
 go.onclick=function(){
-  if(D.k){ var ks=ready(); if(!ks.length) return; compact(pads[ks[0]],D.k).then(function(code){ document.getElementById('code').value='[UNA 서명 회신] 요청번호 '+D.k+'\n'+code; document.getElementById('msg').textContent=''; document.getElementById('sheet').classList.add('on'); }); return; }
+  if(D.k){ var ks=ready(); if(!ks.length) return; go.disabled=true; go.textContent='전송 중…';
+    compact(pads[ks[0]],D.k).then(function(code){
+      function showCode(){ document.getElementById('code').value='[UNA 서명 회신] 요청번호 '+D.k+'\n'+code; document.getElementById('msg').textContent=''; document.getElementById('sheet').classList.add('on'); go.disabled=false; check(); }
+      if(D.k.length<8){ showCode(); return; }
+      var base='https://firestore.googleapis.com/v1/projects/una-sign/databases/(default)/documents/signs', key='AIzaSyDwLyF95GmBCGPEVSeUV0CncP5bbJBYva0';
+      var body=JSON.stringify({fields:{s:{stringValue:code},at:{stringValue:new Date().toISOString()}}});
+      function post(){ return fetch(base+'?documentId='+D.k+'&key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:body}); }
+      post().then(function(r){ if(r.status===409) return fetch(base+'/'+D.k+'?key='+key,{method:'DELETE'}).then(post); return r; }).then(function(r){
+        if(!r.ok) throw new Error('http '+r.status);
+        app.innerHTML='<div class="card done-card"><div class="big">✓</div><h1>서명이 전달되었습니다</h1><p>점검자에게 자동으로 전달되었습니다.<br>이 창은 닫으셔도 됩니다.</p></div>';
+        document.getElementById('bar').hidden=true; window.scrollTo(0,0);
+      }).catch(function(){ showCode(); document.getElementById('msg').textContent='자동 전달에 실패했습니다. 아래 코드를 복사해 요청한 분께 보내 주세요.'; });
+    }); return; }
   var keys=ready(); if(!keys.length) return;
   var obj=D.k?{v:2,k:D.k,at:new Date().toISOString(),g:{}}:{v:1,id:D.id,t:D.t,at:new Date().toISOString(),g:{}};
   keys.forEach(function(k){ obj.g[k]=pack(pads[k]); });
