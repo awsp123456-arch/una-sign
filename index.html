@@ -97,7 +97,7 @@ function render(d){
     });
   });
   var cnt=['G','S','B','N'].map(function(k,i){return '<i class="tag '+k+'">'+RN[k]+' '+(d.c[i]||0)+'</i>';}).join('');
-  if(d.k){ app.innerHTML='<div class="card head"><small>UNA 안전보건팀</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><p class="kmsg">카톡·메일로 받은 점검 결과를 확인하셨다면 아래에 성명을 쓰고 서명해 주세요.</p></div><h2>서명</h2><div id="roles"></div>'; }
+  if(d.k){ app.innerHTML='<div class="card head"><small>UNA 안전보건팀</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><p class="kmsg">카톡·메일로 받은 점검 결과를 확인하셨다면 아래 칸에 서명해 주세요.</p></div><h2>서명</h2><div id="roles"></div>'; }
   else app.innerHTML='<div class="card head"><small>안전보건 이행점검 · 확인 서명</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><div class="score"><span>점수</span><b>'+E(d.sc)+'</b><span>/ '+E(d.mx)+'점</span></div><div class="counts">'+cnt+'</div></div>'
    +'<h2>조치가 필요한 항목</h2><div class="card list">'+(acts.length?acts.join(''):'<div class="none">보완·미흡 항목이 없습니다.</div>')+'</div>'
    +(d.f?'':'<details class="card all list"><summary>'+(d.f?('항목별 점수 ('+d.cats.length+'개 항목)'):('전체 점검결과 ('+d.cats.reduce(function(n,c){return n+c[3].length;},0)+'항목)'))+'</summary>'+allHtml+'</details>')
@@ -107,7 +107,7 @@ function render(d){
     var key=r[0],label=r[1],name=r[2],signed=r[3];
     var el=document.createElement('div'); el.className='card role'+(signed?' done':'');
     if(signed){ el.innerHTML='<div class="top"><b>'+E(label)+' · '+E(name)+'</b><span>PC에서 서명 완료</span></div>'; host.appendChild(el); return; }
-    el.innerHTML='<div class="top"><b>'+E(label)+'</b><span>서명 전</span></div><label>성명 <input value="'+E(name)+'" autocomplete="off"></label><div class="pad"><span class="line"></span><canvas></canvas><span class="hint">이 칸에 손가락으로 서명해 주세요</span></div><div class="row"><button class="ghost" type="button">지우기</button></div>';
+    el.innerHTML='<div class="top"><b>'+E(label)+'</b><span>서명 전</span></div><label'+(d.k?' style="display:none"':'')+'>성명 <input value="'+E(name)+'" autocomplete="off"></label><div class="pad"><span class="line"></span><canvas></canvas><span class="hint">이 칸에 손가락으로 서명해 주세요</span></div><div class="row"><button class="ghost" type="button">지우기</button></div>';
     host.appendChild(el);
     var cv=el.querySelector('canvas'),box=el.querySelector('.pad'),ctx=cv.getContext('2d');
     var p={strokes:[],len:0,name:el.querySelector('input'),el:el,w:0,h:0};
@@ -132,9 +132,24 @@ function pack(p){
   var out=[]; p.strokes.forEach(function(s){ var a=[s[0][0],s[0][1]]; for(var i=1;i<s.length;i++){ a.push(s[i][0]-s[i-1][0],s[i][1]-s[i-1][1]); } out.push(a); });
   return {n:(p.name.value||'').trim().slice(0,40),w:Math.round(p.w),h:Math.round(p.h),s:out};
 }
+function rdp(pts,eps){ if(pts.length<3) return pts.slice(); var a=pts[0],b=pts[pts.length-1],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1,mi=0,md=0; for(var i=1;i<pts.length-1;i++){ var d=Math.abs(dy*pts[i][0]-dx*pts[i][1]+b[0]*a[1]-b[1]*a[0])/L; if(L===1&&!dx&&!dy) d=Math.hypot(pts[i][0]-a[0],pts[i][1]-a[1]); if(d>md){md=d;mi=i;} } if(md<=eps) return [a,b]; return rdp(pts.slice(0,mi+1),eps).slice(0,-1).concat(rdp(pts.slice(mi),eps)); }
+function compact(p,k){
+  var xs=[],ys=[]; p.strokes.forEach(function(s){ s.forEach(function(q){ xs.push(q[0]); ys.push(q[1]); }); });
+  var x0=Math.min.apply(null,xs),y0=Math.min.apply(null,ys),W=Math.max.apply(null,xs)-x0||1,H=Math.max.apply(null,ys)-y0||1,G=149,sc=G/Math.max(W,H);
+  var out=[]; for(var i=0;i<6;i++) out.push((k.charCodeAt(i)||48)&127);
+  p.strokes.forEach(function(s){
+    var q=rdp(s.map(function(t){ return [(t[0]-x0)*sc,(t[1]-y0)*sc]; }),0.9).map(function(t){ return [Math.round(t[0]),Math.round(t[1])]; });
+    var pts=[q[0]]; for(var j=1;j<q.length;j++){ var l=pts[pts.length-1]; if(q[j][0]===l[0]&&q[j][1]===l[1]) continue; var dx=q[j][0]-l[0],dy=q[j][1]-l[1],n=Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/127); for(var m=1;m<=n;m++) pts.push([l[0]+Math.round(dx*m/n),l[1]+Math.round(dy*m/n)]); }
+    for(var o=0;o<pts.length;o+=250){ var seg=pts.slice(o?o-1:0,o+250); out.push(seg.length,seg[0][0],seg[0][1]); for(var r=1;r<seg.length;r++){ out.push((seg[r][0]-seg[r-1][0])&255,(seg[r][1]-seg[r-1][1])&255); } }
+  });
+  var u=new Uint8Array(out);
+  function fin(z,pre){ return pre+'.'+bytesToB64u(z); }
+  if(typeof CompressionStream==='undefined') return Promise.resolve(fin(u,'S1'));
+  return streamBytes(u,CompressionStream,'deflate-raw').then(function(z){ return z.length<u.length?fin(z,'S1z'):fin(u,'S1'); });
+}
 go.onclick=function(){
+  if(D.k){ var ks=ready(); if(!ks.length) return; compact(pads[ks[0]],D.k).then(function(code){ document.getElementById('code').value='[UNA 서명 회신] 요청번호 '+D.k+'\n'+code; document.getElementById('msg').textContent=''; document.getElementById('sheet').classList.add('on'); }); return; }
   var keys=ready(); if(!keys.length) return;
-  if(D.k&&!(pads.s&&pads.s.name.value.trim())){ alert('성명을 입력해 주세요.'); return; }
   var obj=D.k?{v:2,k:D.k,at:new Date().toISOString(),g:{}}:{v:1,id:D.id,t:D.t,at:new Date().toISOString(),g:{}};
   keys.forEach(function(k){ obj.g[k]=pack(pads[k]); });
   encode(obj).then(function(code){ document.getElementById('code').value=code; document.getElementById('msg').textContent=''; document.getElementById('sheet').classList.add('on'); });
