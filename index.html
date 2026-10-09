@@ -50,6 +50,7 @@ button{font-family:inherit;cursor:pointer}
 .empty{padding:20px 16px}.empty h1{font-size:20px;margin:0 0 6px}.empty p{color:var(--mute);margin:0 0 12px;font-size:14px}
 .empty textarea{width:100%;height:120px;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;font-family:inherit}
 .err{color:var(--bad);font-size:14px;margin-top:8px}
+.kmsg{margin:10px 0 0;font-size:14px;line-height:1.6;color:#475467}
 </style></head><body>
 <div class="wrap" id="app"></div>
 <div class="bar" id="bar" hidden><div class="in"><button class="primary" id="go" disabled>서명 완료 · 회신 코드 만들기</button><small>회신 코드를 서명 요청한 분께 보내면 점검표에 저장됩니다</small></div></div>
@@ -96,7 +97,8 @@ function render(d){
     });
   });
   var cnt=['G','S','B','N'].map(function(k,i){return '<i class="tag '+k+'">'+RN[k]+' '+(d.c[i]||0)+'</i>';}).join('');
-  app.innerHTML='<div class="card head"><small>안전보건 이행점검 · 확인 서명</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><div class="score"><span>점수</span><b>'+E(d.sc)+'</b><span>/ '+E(d.mx)+'점</span></div><div class="counts">'+cnt+'</div></div>'
+  if(d.k){ app.innerHTML='<div class="card head"><small>UNA 안전보건팀</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><p class="kmsg">카톡·메일로 받은 점검 결과를 확인하셨다면 아래에 성명을 쓰고 서명해 주세요.</p></div><h2>서명</h2><div id="roles"></div>'; }
+  else app.innerHTML='<div class="card head"><small>안전보건 이행점검 · 확인 서명</small><h1>'+E(d.t)+'</h1><div class="meta">'+d.m.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div><div class="score"><span>점수</span><b>'+E(d.sc)+'</b><span>/ '+E(d.mx)+'점</span></div><div class="counts">'+cnt+'</div></div>'
    +'<h2>조치가 필요한 항목</h2><div class="card list">'+(acts.length?acts.join(''):'<div class="none">보완·미흡 항목이 없습니다.</div>')+'</div>'
    +(d.f?'':'<details class="card all list"><summary>'+(d.f?('항목별 점수 ('+d.cats.length+'개 항목)'):('전체 점검결과 ('+d.cats.reduce(function(n,c){return n+c[3].length;},0)+'항목)'))+'</summary>'+allHtml+'</details>')
    +'<h2>서명</h2><div id="roles"></div>';
@@ -132,7 +134,8 @@ function pack(p){
 }
 go.onclick=function(){
   var keys=ready(); if(!keys.length) return;
-  var obj={v:1,id:D.id,t:D.t,at:new Date().toISOString(),g:{}};
+  if(D.k&&!(pads.s&&pads.s.name.value.trim())){ alert('성명을 입력해 주세요.'); return; }
+  var obj=D.k?{v:2,k:D.k,at:new Date().toISOString(),g:{}}:{v:1,id:D.id,t:D.t,at:new Date().toISOString(),g:{}};
   keys.forEach(function(k){ obj.g[k]=pack(pads[k]); });
   encode(obj).then(function(code){ document.getElementById('code').value=code; document.getElementById('msg').textContent=''; document.getElementById('sheet').classList.add('on'); });
 };
@@ -147,7 +150,7 @@ document.getElementById('share').onclick=function(){
   var v=document.getElementById('code').value;
   if(navigator.share) navigator.share({text:v}).catch(function(){}); else document.getElementById('copy').click();
 };
-start(fromHash());
+(function(){ var q=/[?&]k=([A-Za-z0-9]{4,12})/.exec(location.search); if(q){ render({k:q[1].toUpperCase(),t:"안전보건 이행점검 확인 서명",m:["요청번호 "+q[1].toUpperCase()],sc:"",mx:"",c:[],cats:[],roles:[["s","확인 서명","",false]]}); } else start(fromHash()); })();
 window.addEventListener('hashchange',function(){ start(fromHash()); });
 })();
 </script></body></html>
