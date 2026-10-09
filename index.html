@@ -157,10 +157,10 @@ go.onclick=function(){
       var body=JSON.stringify({fields:{s:{stringValue:code},at:{stringValue:new Date().toISOString()}}});
       function post(){ return fetch(base+'?documentId='+D.k+'&key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:body}); }
       post().then(function(r){ if(r.status===409) return fetch(base+'/'+D.k+'?key='+key,{method:'DELETE'}).then(post); return r; }).then(function(r){
-        if(!r.ok) throw new Error('http '+r.status);
+        if(!r.ok) return r.text().then(function(t){ var m2=''; try{ m2=(JSON.parse(t).error||{}).status||''; }catch(e){} throw new Error(r.status+(m2?' '+m2:'')); });
         app.innerHTML='<div class="card done-card"><div class="big">✓</div><h1>서명이 전달되었습니다</h1><p>점검자에게 자동으로 전달되었습니다.<br>이 창은 닫으셔도 됩니다.</p></div>';
         document.getElementById('bar').hidden=true; window.scrollTo(0,0);
-      }).catch(function(){ showCode(); document.getElementById('msg').textContent='자동 전달에 실패했습니다. 아래 코드를 복사해 요청한 분께 보내 주세요.'; });
+      }).catch(function(e){ showCode(); document.getElementById('msg').textContent='자동 전달에 실패했습니다 ('+((e&&e.message)||'연결 오류')+'). 아래 코드를 복사해 요청한 분께 보내 주세요.'; });
     }); return; }
   var keys=ready(); if(!keys.length) return;
   var obj=D.k?{v:2,k:D.k,at:new Date().toISOString(),g:{}}:{v:1,id:D.id,t:D.t,at:new Date().toISOString(),g:{}};
